@@ -1,0 +1,25 @@
+{
+  "name": "dominate-urstudy",
+  "version": "1.0.0",
+  "description": "My first multiplayer game for students to compete solve quizzes.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nilvng/dominate-urstudy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nilvng/dominate-urstudy/issues"
+  },
+  "homepage": "https://github.com/nilvng/dominate-urstudy#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "expressjs": "^1.0.1",
+    "websocket": "^1.0.34"
+  }
+}
