@@ -1,131 +1,81 @@
+const express = require('express');
+const { stat } = require('fs/promises');
+const app = express();
 const http = require("http");
+const server = http.createServer(app);
 
-const websocket = require('websocket').server
-const server = http.createServer();
-const PORT = process.env.PORT || 9090
-server.listen(PORT, () => console.log(`Listening ... on ${PORT}`));
+const {Server } = require("socket.io");
+const io = new Server(server);
 
-const clients = {};
-const games = {};
-
-const  wsServer = new websocket({
-    "httpServer": server
+app.get('/', (req,res) => {
+    res.sendFile(__dirname + '/index.html')
 })
 
-wsServer.on("request", req => {
-    // tcp connection established
-    const connection = req.accept(null, req.origin);
-       // once connect, create uid for client
-       const clientId = guid()
+const games = {};
 
-       // save user preference
-       clients[clientId] = {
-           "connection": connection
-       }
-   
-       const payload = {
-           "method": "connect",
-           "clientId": clientId
-       }
-   
-       // send back client connection
-       connection.send(JSON.stringify(payload))
-   
-    connection.on("open", () => console.log("opened!"))
-    connection.on("closed", () => console.log("closed!"))
-    connection.on("message", message => {
-        console.log("message!");
-        const res = JSON.parse(message.utf8Data) // may fail if itsnt json
-        
-        // request to Create a game
-        if (res.method === "create"){
-            const clientId = res.clientId
-            const gameId = guid()
-            games[gameId] = {
-                "id": gameId,
-                "cells": 20,
-                "clients": []
-            }
-            const payload = {
-                "method": "create",
-                "game": gameId
-            }
-            // respond back to user
-            const con = clients[clientId].connection
-            con.send(JSON.stringify(payload))
+io.on("connection", (socket) => {
+    console.log("User connected")
+
+    socket.on("create", data => {
+
+        const gameId = guid()
+        games[gameId] = {
+            "id": gameId,
+            "cells": 20,
+            "clients": []
         }
+        const payload = {
+            gameId
+        }
+        // respond back to user
+        socket.emit('create',payload)
+        })
 
-            // request to Join a game
-            if (res.method === "join"){
-                const clientId = res.clientId
-                const gameId = res.gameId
-                const game = games[gameId] 
+    socket.on("join", data => {
+        const clientName = data.clientName
+        const gameId = data.gameId
+        console.log("client: "+ socket.id + " join: "+ gameId)
+        socket.join(gameId);
 
-                if (games[gameId].clients.length >= 3) 
-                {
-                    //sorry max players reach
-                    return;
+        //sorry max players reach
+        if (games[gameId].clients.length >= 3) return;
+
+        const color =  {"0": "Red", "1": "Green", "2": "Blue"}[games[gameId].clients.length]
+        games[gameId].clients.push({
+            clientName,
+            color
+        })
+        const payload = {
+            game: games[gameId]
                 }
-                if (games[gameId].clients.length == 2) broadcastState() // first click will start the game
+        // inform other users
+        io.to(gameId).emit('join',payload)
+        })
 
-                const color =  {"0": "Red", "1": "Green", "2": "Blue"}[game.clients.length]
-                games[gameId].clients.push({
-                    "clientId": clientId,
-                    "color": color
-                })
+        socket.on("play", data => {
+            
+            const gameId= data.gameId;
+            const cellId = data.cellId;
+            const color = data.color;
 
-                const payload = {
-                    "method": "join",
-                    "game": game
-                }
-                // broadcast all users
-                //loop through all clients and tell them that people has joined
-                games[gameId].clients.forEach(c => {
-                clients[c.clientId].connection.send(JSON.stringify(payload))
-            })
+            let state = games[gameId].state;
+
+            if (!state) {
+                state = {} // initialize state of board, if hasnt already
             }
 
-            if (res.method === "play"){
-
-                const gameid= res.gameId;
-                const cellId = res.cellId;
-                const color = res.color;
-
-                let state = games[gameid].state;
-
-                if (!state) {
-                    state = {} // initialize state of board, if hasnt already
-                }
-
-                state[cellId] = color;
-                games[gameid].state = state;
-                //console.log("play " + games[gameid].state[cellId] + "cell: "+ cellId)
-            }
-
-
+            state[cellId] = color;
+            games[gameId].state = state;
+            io.to(gameId).emit("play",{state})
+            //console.log("play " + games[gameid].state[cellId] + "cell: "+ cellId)
+        })
     })
 
  
 
-})
+const PORT = process.env.PORT || 9090
+server.listen(PORT, () => console.log(`Listening ... on ${PORT}`));
 
-function broadcastState(){
-    //console.log('broadcastin!!')
-    // update every games
-    for (const g of Object.keys(games)) {
-        const game = games[g]
-        const s = game.state
-        //console.log("state before sent: " + s)
-        const payload = {
-            "method": "update",
-            "state": s
-        }
-        game.clients.forEach( c => {
-            clients[c.clientId].connection.send(JSON.stringify(payload))
-        })
-}
-    setTimeout(broadcastState, 500);
-}
 
 function S4() {
     return (((1+Math.random())*0x10000)|0).toString(16).substring(1); 

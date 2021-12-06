@@ -20,6 +20,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "expressjs": "^1.0.1",
+    "socket.io": "^4.4.0",
     "websocket": "^1.0.34"
   }
 }
