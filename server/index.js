@@ -1,11 +1,8 @@
 const http = require("http");
-const app = require("express")()
-app.get("/", (req,res)=> res.sendFile(__dirname + "/index.html"))
-app.listen(9091, () => console.log("Listening on port 9091"))
 
 const websocket = require('websocket').server
 const server = http.createServer();
-const PORT = 9090
+const PORT = process.env.PORT || 9090
 server.listen(PORT, () => console.log(`Listening ... on ${PORT}`));
 
 const clients = {};
@@ -102,7 +99,7 @@ wsServer.on("request", req => {
 
                 state[cellId] = color;
                 games[gameid].state = state;
-                console.log("play " + games[gameid].state[cellId] + "cell: "+ cellId)
+                //console.log("play " + games[gameid].state[cellId] + "cell: "+ cellId)
             }
 
 
@@ -113,12 +110,12 @@ wsServer.on("request", req => {
 })
 
 function broadcastState(){
-    console.log('broadcastin!!')
+    //console.log('broadcastin!!')
     // update every games
     for (const g of Object.keys(games)) {
         const game = games[g]
         const s = game.state
-        console.log("state before sent: " + s)
+        //console.log("state before sent: " + s)
         const payload = {
             "method": "update",
             "state": s
